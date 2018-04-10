@@ -1,17 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h> // memset
 #include <pthread.h> // pthread_t, pthread_create, pthread_join
 #include <semaphore.h> // sem_init, sem_wait, sem_post
 #include <time.h>
-
-#define NUM_SEAT 3
-
-#define SLEEP_MAX 5
+#include <stdio.h>
+#include <stdlib.h>
 
 //sematphores
-sem_t sem_stu;
-sem_t sem_ta;
+sem_t studentSemaphore;
+sem_t teachingAssistantSemaphore;
 
 //sem_t mutex;
 pthread_mutex_t mutex;
@@ -21,9 +17,13 @@ int count = 0; //number of waiting students
 int next_seat = 0;
 int next_teach = 0;
 
-void rand_sleep(void);
-void* stu_programming(void* stu_id);
-void* ta_teaching();
+#define NUM_SEAT 3
+
+#define SLEEP_MAX 5
+
+void randomSleep(void);
+void* studentCoding(void* stu_id);
+void* teacherTeaching();
 
 int main(int argc, char **argv){
 
@@ -31,26 +31,26 @@ int main(int argc, char **argv){
 	pthread_t *students;
 	pthread_t ta;
 	
-	int* student_ids;
+	int* s_id;
 	int student_num;
 	
 	//index
 	int i;
 
 	//get number of students from user
-	printf("How many students? ");
+	printf("Enter no of students coding initially : ");
 	scanf("%d", &student_num);
 
 	printf("TEACHING ASSISTANT SLEEPING INITIALLY\n");
 	
 	//initialize
 	students = (pthread_t*)malloc(sizeof(pthread_t) * student_num);
-	student_ids = (int*)malloc(sizeof(int) * student_num);
+	s_id = (int*)malloc(sizeof(int) * student_num);
 
-	memset(student_ids, 0, student_num);
+	memset(s_id, 0, student_num);
 
-	sem_init(&sem_stu,0,0);
-	sem_init(&sem_ta,0,1);
+	sem_init(&studentSemaphore,0,0);
+	sem_init(&teachingAssistantSemaphore,0,1);
 	
 	//set random
 	srand(time(NULL));
@@ -59,13 +59,13 @@ int main(int argc, char **argv){
 	pthread_mutex_init(&mutex,NULL);
 
 	//create thread
-	pthread_create(&ta,NULL,ta_teaching,NULL);
+	pthread_create(&ta,NULL,teacherTeaching,NULL);
 
 	//create threads for students
 	for(i=0; i<student_num; i++)
 	{
-		student_ids[i] = i+1;
-		pthread_create(&students[i], NULL, stu_programming, (void*) &student_ids[i]);
+		s_id[i] = i+1;
+		pthread_create(&students[i], NULL, studentCoding, (void*) &s_id[i]);
 	} 
 	
 	pthread_join(ta, NULL);//join teaching assistant thread
@@ -79,7 +79,7 @@ int main(int argc, char **argv){
 	return 0;
 }
 
-void* stu_programming(void* stu_id)
+void* studentCoding(void* stu_id)
 {
 	int id = *(int*)stu_id;
 
@@ -87,7 +87,7 @@ void* stu_programming(void* stu_id)
 	
 	while(1)
 	{
-		rand_sleep();
+		randomSleep();
 
 		//sem_wait(&mutex);
 		pthread_mutex_lock(&mutex);
@@ -119,24 +119,24 @@ void* stu_programming(void* stu_id)
 			pthread_mutex_unlock(&mutex);
 	
 			//wakeup ta
-			sem_post(&sem_stu);
-			sem_wait(&sem_ta);
+			sem_post(&studentSemaphore);
+			sem_wait(&teachingAssistantSemaphore);
 		}
 		else //no more chairs
 		{
 			//sem_post(&mutex);
 			pthread_mutex_unlock(&mutex);
 			
-			printf("\nNo more chairs. student %d is back to programming\n\n",id);		
+			printf("\nNo more chairs. student %d goes back to coding\n\n",id);		
 		}
 	}				
 }
 
-void* ta_teaching()
+void* teacherTeaching()
 {
 	while(1)
 	{
-		sem_wait(&sem_stu);	
+		sem_wait(&studentSemaphore);	
 		
 		//sem_wait(&mutex);
 		pthread_mutex_lock(&mutex);
@@ -162,18 +162,18 @@ void* ta_teaching()
 			
 			next_teach = (next_teach + 1) % NUM_SEAT;
 		
-		rand_sleep();
+		randomSleep();
 		
 		if(chair[0]==0 && chair[1]==0 && chair[2]==0)
 		printf("TEACHING ASSISTANT SLEEPING AGAIN\n");
 		//sem_post(&mutex);
 		pthread_mutex_unlock(&mutex);
 
-		sem_post(&sem_ta);
+		sem_post(&teachingAssistantSemaphore);
 	}	
 }
 
-void rand_sleep(void)
+void randomSleep(void)
 {
 	
 	int time = rand() % SLEEP_MAX + 1;
