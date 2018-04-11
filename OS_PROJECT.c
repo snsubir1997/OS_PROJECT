@@ -9,7 +9,7 @@
 sem_t studentSemaphore;
 sem_t teachingAssistantSemaphore;
 
-//static exit_counter=3;
+static exit_counter=3;
 
 //sem_t mutex;
 pthread_mutex_t mutex;
@@ -168,13 +168,13 @@ void* teacherTeaching()
 		
 		if(chair[0]==0 && chair[1]==0 && chair[2]==0)
 		{
-			//printf("TEACHING ASSISTANT SLEEPING AGAIN\n");
-			//exit_counter--;
-			//if(!exit_counter)
-			//{
+			printf("TEACHING ASSISTANT SLEEPING AGAIN\n");
+			exit_counter--;
+			if(!exit_counter)
+			{
 				printf("\n\nDAY ENDS.EVERYONE HOME");
 				exit(0);
-			//}
+			}
 		}
 		//sem_post(&mutex);
 		pthread_mutex_unlock(&mutex);
